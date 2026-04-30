@@ -1,93 +1,139 @@
-Author: Vivek Reddy Kasireddy 
-Assignment: Packet Scheduling Program 
-Date: 2/22/24 
-
-This README file provides instructions on compiling and testing the Packet Scheduling program. The program is designed to determine the order of outgoing packets based on their priorities.
-
-Compilation
-
-1.1 C Program Compilation
-
-To compile the C program (`packet_scheduling.c`), follow these steps:
-
-1. Open your terminal or command prompt.
-2. Navigate to the directory containing the source code (`packet_scheduling.c`).
-
-    
-    cd /path/to/your/directory
-    
-
-3. Compile the program using the `gcc` compiler:
-    using makefile: 
-    make 
-    gcc packet_scheduling.c -o packet_scheduling
-   
-    This command compiles the source code and produces an executable file named `packet_scheduling`.
-
-1.2 Makefile Compilation
-
-Alternatively, you can compile the program using the provided Makefile. To compile using the Makefile, follow these steps:
-
-1. Open your terminal or command prompt.
-2. Navigate to the directory containing the Makefile and the source code (`packet_scheduling.c`).
-3. Run the `make` command:
-    make
-    This command will compile the program according to the rules specified in the Makefile.
-
-______________________________________________________________________________________________________________________________________________________
-2. Testing
-2.1 Testing Input Validity
-
-The program has several input validity checks. To test these checks, 
-we'll create input files with different scenarios and observe the program's behavior.
-
-Case 1: Correct input
-Create an input file named `sample1.in` with correct input:
-    5 HLHLH
-
-Run the program with this input file:
-    ./packet_scheduling < sample1.in
-
-Expected output:
-    0 2 1 4 3
+# HTTP Client/Server with Priority Packet Scheduling
 
 
-Case 2: Wrong length of priority string
-Create an input file named `sample2.in` with a mismatch between the number of packets and the length of the priority string:
 
-    4 HLL
+A multithreaded HTTP/1.1 client/server implementation built from scratch in C using POSIX sockets, with a custom priority-based packet scheduler that controls transmission order based on packet priority labels (`H` = high, `L` = low).
 
-Run the program with this input file:
+---
 
-    ./packet_scheduling < sample2.in
+## Overview
 
-Expected output:
-    Wrong input: the number of packets is wrong.
+This project has two main components:
 
+1. **HTTP Client/Server** — handles HTTP/1.1 GET/POST requests, response formatting, and error handling over raw sockets (no networking libraries)
+2. **Packet Scheduler** — sits between the client and server, reads a packet count and priority string (e.g. `5 HLHLH`), and reorders outgoing packets so all high-priority packets transmit before low-priority ones
 
- Case 3: Wrong number of packets
+The scheduler simulates how a router prioritizes traffic — a useful model for understanding QoS (Quality of Service) in real networks.
 
-Create an input file named `sample3.in` with an incorrect number of packets:
-    0 HLHLH
+---
 
-Run the program with this input file:
-    ./packet_scheduling < sample3.in
+## How the scheduler works
 
-Expected output:
-    Wrong input: the number of packets must be greater than 0.
+Given input `5 HLHLH`:
 
+```
+Incoming:   pkt0(H)  pkt1(L)  pkt2(H)  pkt3(L)  pkt4(H)
+                         |
+                  [ Scheduler ]
+                  /           \
+         High queue          Low queue
+         [0, 2, 4]             [1, 3]
+                  \           /
+                   Drain H first
+                         |
+Output order:   0  2  4  1  3
+```
 
-Case 4: Wrong priority
-Create an input file named `sample4` with incorrect priority characters:
-    4 HXHH
+High-priority packets are always drained first, preserving relative arrival order within each priority class.
 
-Run the program with this input file:
-    ./packet_scheduling < sample4.in
+---
 
-Expected output:
-    Wrong input: the priority must be H or L.
+## Compilation
 
+**Using make (recommended):**
+```bash
+make
+```
 
-2.2 Testing Output File
+**Manual:**
+```bash
+gcc packet_scheduling.c -o packet_scheduling
+```
 
-After running the program with each input file, check the `output.txt` file for the generated output. Ensure that the output matches the expected output for each test case.
+---
+
+## Usage
+
+```bash
+./packet_scheduling < input.in
+```
+
+Input format: `<num_packets> <priority_string>`
+
+```
+5 HLHLH
+```
+
+Output: space-separated packet indices in transmission order
+
+```
+0 2 1 4 3
+```
+
+---
+
+## Test cases
+
+### Case 1 — correct input
+```bash
+echo "5 HLHLH" | ./packet_scheduling
+# Expected: 0 2 1 4 3
+```
+
+### Case 2 — mismatched length
+```bash
+echo "4 HLL" | ./packet_scheduling
+# Expected: Wrong input: the number of packets is wrong.
+```
+
+### Case 3 — zero packets
+```bash
+echo "0 HLHLH" | ./packet_scheduling
+# Expected: Wrong input: the number of packets must be greater than 0.
+```
+
+### Case 4 — invalid priority character
+```bash
+echo "4 HXHH" | ./packet_scheduling
+# Expected: Wrong input: the priority must be H or L.
+```
+
+---
+
+## Input validation
+
+The program catches and reports:
+- Packet count of 0 or negative
+- Priority string length not matching declared packet count
+- Priority characters other than `H` or `L`
+
+---
+
+## Technologies
+
+- **C** — core implementation
+- **POSIX sockets** — raw TCP for HTTP client/server
+- **HTTP/1.1** — request/response parsing, status codes, error handling
+- **Wireshark** — used for traffic inspection and debugging during development
+
+---
+
+## Repository structure
+
+```
+/src
+  packet_scheduling.c   # Scheduler + HTTP client/server
+  Makefile
+/tests
+  sample1.in            # Valid input
+  sample2.in            # Wrong priority string length
+  sample3.in            # Zero packets
+  sample4.in            # Invalid priority character
+```
+
+---
+
+## Author
+
+**Vivek Reddy Kasireddy** — [LinkedIn](https://linkedin.com) | [Website](https://vivek.com)  
+WPI Computer Science & Robotics Engineering, Class of 2026
